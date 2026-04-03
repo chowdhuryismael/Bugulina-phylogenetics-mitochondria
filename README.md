@@ -86,6 +86,20 @@ keep {
 done
 
 
+## gene check
+#!/bin/bash
+
+echo -e "Gene\tSample\tPresent" > gene_presence_absence.tsv
+
+# Loop over each gene file
+for gene_file in genes/aa/by_gene/*.faa; do
+    gene=$(basename "$gene_file" .faa)
+    
+    # Extract the sample names from headers
+    awk -v gene="$gene" '/^>/ {split($0,a,"|"); print gene"\t"a[1]"\t1"}' "$gene_file" >> gene_presence_absence.tsv
+done
+
+##
 
 
 
