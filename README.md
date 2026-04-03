@@ -41,3 +41,52 @@ for f in *.fasta
         --circrot 0 \
         -r $refdir
 end
+
+
+
+
+aa gene extractions
+
+!/bin/bash
+
+# Make sure output folder exists
+mkdir -p genes/aa/by_gene
+
+# Define the 13 protein-coding genes
+genes=("atp6" "atp8" "cox1" "cox2" "cox3" "cob" "nad1" "nad2" "nad3" "nad4" "nad4l" "nad5" "nad6")
+
+# Loop through each sample folder
+for sample_dir in */; do
+    sample=$(basename "$sample_dir")
+    faa_file="${sample_dir}result.faa"
+
+    if [[ -f "$faa_file" ]]; then
+        echo "Processing $sample"
+
+        # Extract each gene
+        for gene in "${genes[@]}"; do
+            awk -v sample="$sample" -v gene="$gene" '
+BEGIN {outfile="genes/aa/by_gene/" gene ".faa"}
+/^>/ {
+    # get the part after last semicolon and remove spaces
+    split($0, a, ";")
+    g = a[length(a)]
+    gsub(/^[ \t]+|[ \t]+$/, "", g)   # trim spaces
+    keep = (g == gene)
+}
+keep {
+    if (/^>/) print ">" sample "|" $0 >> outfile
+    else print >> outfile
+}
+' "$faa_file"
+	done
+    else
+        echo "No result.faa in $sample_dir"
+    fi
+done
+
+
+
+
+
+
