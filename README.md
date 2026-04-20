@@ -175,7 +175,7 @@ end
 
 
 
-catfasta2phyml -c -f *_clean.fasta > final_supermatrix.fasta 2> partition.txt
+./AMAS.py concat -f fasta -d dna -t final_supermatrix_amas.fasta -p partition_amas.txt -u fasta -i atp6_aligned_trimmed_clean.fasta atp8_aligned_trimmed_clean.fasta cox1_aligned_trimmed_clean.fasta cox2_aligned_trimmed_clean.fasta cox3_aligned_trimmed_clean.fasta cob_aligned_trimmed_clean.fasta nad1_aligned_trimmed_clean.fasta nad2_aligned_trimmed_clean.fasta nad3_aligned_trimmed_clean.fasta nad4_aligned_trimmed_clean.fasta nad4l_aligned_trimmed_clean.fasta nad5_aligned_trimmed_clean.fasta nad6_aligned_trimmed_clean.fasta rrnL_aligned_1_clean.fasta rrnS_aligned_1_clean.fasta
 
 
 iqtree2 -s final_supermatrix_amas.fasta -p partition_iqtree.txt -m MFP+MERGE -B 1000 -alrt 1000 -nt 32
