@@ -66,22 +66,42 @@ for sample_dir in */; do
         # Extract each gene
         for gene in "${genes[@]}"; do
             awk -v sample="$sample" -v gene="$gene" '
-BEGIN {outfile="genes/aa/by_gene/" gene ".faa"}
+#!/bin/bash
+
+mkdir -p genes/nuc/by_gene
+
+genes=("atp6" "atp8" "cox1" "cox2" "cox3" "cob" "nad1" "nad2" "nad3" "nad4" "nad4l" "nad5" "nad6")
+
+for sample_dir in */; do
+    sample=$(basename "$sample_dir")
+    
+    # Use result.fas (nucleotides), not result.faa
+    nuc_file="${sample_dir}result.fas"
+    
+    if [[ -f "$nuc_file" ]]; then
+        echo "Extracting nucleotides from $sample"
+        
+        for gene in "${genes[@]}"; do
+            awk -v sample="$sample" -v gene="$gene" '
+BEGIN {outfile="genes/nuc/by_gene/" gene ".fasta"}
 /^>/ {
-    # get the part after last semicolon and remove spaces
-    split($0, a, ";")
-    g = a[length(a)]
-    gsub(/^[ \t]+|[ \t]+$/, "", g)   # trim spaces
+    # Get the gene name from the end of the header
+    match($0, /; ([^;]+)$/)
+    g = tolower(substr($0, RSTART+2))
     keep = (g == gene)
 }
 keep {
-    if (/^>/) print ">" sample "|" $0 >> outfile
-    else print >> outfile
+    if (/^>/) {
+        # Create new header with sample name
+        print ">" sample "|" substr($0, 2) >> outfile
+    } else {
+        print >> outfile
+    }
 }
-' "$faa_file"
-	done
+' "$nuc_file"
+        done
     else
-        echo "No result.faa in $sample_dir"
+        echo "No result.fas in $sample_dir"
     fi
 done
 
@@ -102,5 +122,86 @@ done
 ##
 
 
+/bin/bash
+
+# Activate your mamba environment
+source /projects/health_sciences/bms/biochemistry/kenny_group/Ismael_chow/mamba/bin/activate bugulidae_analysis
+
+# Loop through each gene in current directory and align
+for gene in *.fas; do
+    echo "Aligning $gene ..."
+    mafft --auto "$gene" > "${gene%.fas}_aligned.fas"
+done
+
+echo "All genes aligned!"
+
+#!/bin/bash
+
+# Activate your mamba environment
+
+source /projects/health_sciences/bms/biochemistry/kenny_group/Ismael_chow/mamba/bin/activate bugulidae_analysis
+for aln in *_aligned.fasta; do
+    trimal -in "$aln" -out "${aln%.fasta}_trimmed.fasta" -automated1
+done
+
+#!bin/fish
+
+# For each clean file, we need to standardize headers
+for file in *_clean.fasta
+    set base (basename $file .fasta)
+    # Create a temporary file with standardized headers
+    awk 'BEGIN {OFS="\t"} 
+         NR==FNR {headers[$0]=1; next} 
+         /^>/ {
+            # Extract base name
+            gsub(/^>/, "", $0)
+            gsub(/,_complete_genome_KM983335/, "", $0)
+            gsub(/,_AW1141/, "", $0)
+            gsub(/\|.*/, "", $0)
+            if ($0 in headers) {
+                print ">" $0
+            } else {
+                print ">" $0
+            }
+         }
+         !/^>/ {print}' \
+         master_headers.txt "$file" > "${base}_standard.fasta"
+end
 
 
+
+
+
+
+
+
+catfasta2phyml -c -f *_clean.fasta > final_supermatrix.fasta 2> partition.txt
+
+
+iqtree2 -s final_supermatrix_amas.fasta -p partition_iqtree.txt -m MFP+MERGE -B 1000 -alrt 1000 -nt 32
+
+Partition file is not in NEXUS format, assuming RAxML-style partition file...
+Subset	Type	Seqs	Sites	Infor	Invar	Model	Name
+1	DNA	35	687	519	103	GTR+MERGE	atp6
+2	DNA	31	88	58	9	GTR+MERGE	atp8
+3	DNA	35	1500	760	618	GTR+MERGE	cox1
+4	DNA	33	670	446	147	GTR+MERGE	cox2
+5	DNA	35	777	462	249	GTR+MERGE	cox3
+6	DNA	34	1113	679	313	GTR+MERGE	cob
+7	DNA	33	923	629	207	GTR+MERGE	nad1
+8	DNA	32	918	723	96	GTR+MERGE	nad2
+9	DNA	35	353	245	74	GTR+MERGE	nad3
+10	DNA	34	1038	735	184	GTR+MERGE	nad4
+11	DNA	33	255	191	33	GTR+MERGE	nad4l
+12	DNA	34	1671	1227	269	GTR+MERGE	nad5
+13	DNA	35	349	274	28	GTR+MERGE	nad6
+14	DNA	34	1237	778	287	GTR+MERGE	rrnL
+15	DNA	34	828	539	161	GTR+MERGE	rrnS
+
+
+
+
+
+
+
+<img width="1188" height="923" alt="bugulina_nz_tree_version7phylogram2_final6" src="https://github.com/user-attachments/assets/0cf0511a-8af1-4d4a-9a7d-c8e9e824567e" />
