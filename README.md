@@ -144,6 +144,46 @@ for aln in *_aligned.fasta; do
     trimal -in "$aln" -out "${aln%.fasta}_trimmed.fasta" -automated1
 done
 
+
+# RNA
+
+#!/bin/bash
+
+mkdir -p genes/rRNA/by_gene
+
+genes=("rrnL" "rrnS")
+
+for sample_dir in mitos_output_all/*/; do
+    sample=$(basename "$sample_dir")
+    fas_file="${sample_dir}result.fas"
+
+    if [[ -f "$fas_file" ]]; then
+        echo "Processing $sample"
+
+        for gene in "${genes[@]}"; do
+            awk -v sample="$sample" -v gene="$gene" '
+BEGIN {outfile="genes/rRNA/by_gene/" gene ".fasta"}
+/^>/ {
+    split($0, a, ";")
+    g = a[length(a)]
+    gsub(/^[ \t]+|[ \t]+$/, "", g)
+    g = tolower(g)
+    keep = (g ~ tolower(gene))
+}
+keep {
+    if (/^>/) print ">" sample "|" substr($0,2) >> outfile
+    else print >> outfile
+}
+' "$fas_file"
+        done
+    else
+        echo "No result.fas in $sample_dir"
+    fi
+done
+
+
+mafft --qinsi rRNA.fasta > rRNA_aligned.fa
+
 #!bin/fish
 
 # For each clean file, we need to standardize headers
